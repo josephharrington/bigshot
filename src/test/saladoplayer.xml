@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<SaladoPlayer>
+	<global debug="false" firstPanorama="pano"/>
+	<panoramas>
+		<panorama id="pano" path="../../temp/vr.bigshot/face_f.xml"/>
+	</panoramas>
+	<modules>
+		<NavigationBar path="../../tools/SaladoPlayer/modules/NavigationBar.swf">
+			<buttons path="../../tools/SaladoPlayer/modules/images/buttons_30x30_blue.png" move="vertical:-3">
+				<button name="up" visible="false" />
+				<button name="down" visible="false" />
+				<button name="left" visible="false" />
+				<button name="right" visible="false" />
+			</buttons>
+			<combobox visible="false" move="vertical:-5"/>
+		</NavigationBar>
+	</modules>
+</SaladoPlayer>	

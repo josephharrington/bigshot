@@ -1,0 +1,184 @@
+<!--
+- Copyright 2010 - 2012 Leo Sutic <leo.sutic@gmail.com>
+-  
+- Licensed under the Apache License, Version 2.0 (the "License"); 
+- you may not use this file except in compliance with the License. 
+- You may obtain a copy of the License at 
+- 
+-     http://www.apache.org/licenses/LICENSE-2.0 
+-     
+- Unless required by applicable law or agreed to in writing, software 
+- distributed under the License is distributed on an "AS IS" BASIS, 
+- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
+- See the License for the specific language governing permissions and 
+- limitations under the License. 
+-->
+<html>
+    <head>
+        <meta name="viewport" content="initial-scale=1.0, width=device-width, height=device-height, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+        <title>
+            Bigshot Simple Test Page
+        </title>
+        <style>
+            body {
+                margin: 0px;
+                padding: 0px;
+                font-family: Arial;
+                font-size: 10pt;
+                background-color: black;
+                overflow: hidden;
+            }
+            
+            div.bigshotContainer {
+                border:1px solid black; 
+                background: red; 
+            }
+            
+            div.hotspot {
+                background: red;
+            }
+            
+            div.bigshotContainer div.hotspot, div.bigshotContainer div.bigshotControls {
+                visibility:hidden;
+            }
+            
+            div.bigshotControls {
+                position:relative; 
+                left:-50%; 
+                top: 540px; 
+                padding: 16px; 
+                z-index:2; 
+                background: #606060;
+                border: 2px solid #404040;
+                -moz-border-radius: 15px;
+                -webkit-border-radius: 15px;
+                border-radius: 15px;
+                color: white;
+            }
+            
+            div.bigshotControls p {
+                margin: 0px;
+            }
+            
+            div.bigshotControls a {
+                color: white;
+            }
+            
+            div.bigshotContainer:hover div.hotspot {
+                border : 1px solid #e0e0e0;
+                cursor : pointer;
+                opacity : 0.5;
+                background: blue;
+                visibility: visible;
+            }
+            
+            div.bigshotContainer:hover div.bigshotControls {
+                visibility: visible;
+            }
+            
+            div.hotspot div.label {
+                visibility: hidden;
+                color: white;
+                background: black;
+                padding: 4px;
+                font-weight: bold;
+                position: relative;
+            }
+            
+            div.bigshotContainer:hover div.hotspot:hover {
+                border : 1px solid white;
+                opacity : 1.0;
+            }
+            
+            div.hotspot:hover div.label {
+                visibility: visible;
+            }
+            
+            div.controls {
+                padding: 4px;
+            }
+            
+            button.control {
+                width: 96px;
+            }
+        </style>
+        <script src="../js/bigshot.js?preprocessor=true">/* */</script>
+        <script>
+            var jsi = null;
+            
+            function myonload () {
+                var container = document.getElementById ("container");
+                
+                jsi = new bigshot.SimpleImage (
+                    new bigshot.ImageParameters ({
+                            basePath : "../../test/simple-sample.jpg",
+                            container : container,
+                            touchUI : false,
+                            minZoom : -4,
+                            width : 681,
+                            height : 1024,
+                            maxZoom : 4
+                        }));
+                
+                jsi.zoomToFit (0);
+                var onresize = function (e) {
+                    container.style.width = window.innerWidth + "px";
+                    container.style.height = window.innerHeight + "px";
+                    jsi.onresize ();
+                };
+                window.onresize = onresize;
+                onresize ();
+                
+                var browser = new bigshot.Browser ();
+                browser.stopMouseEventBubbling (document.getElementById ("bigshotControls"));
+            }
+            
+            function zoomOut () {
+                jsi.moveTo (null, null, jsi.getZoom () - 0.5);
+            }
+            
+            function zoomIn () {
+                jsi.moveTo (null, null, jsi.getZoom () + 0.5);
+            }
+            
+            function smoothIn () {
+                jsi.flyTo (7352 / 2, 5419 / 2, 0.0);
+            }
+            
+            function toHotspot () {
+                jsi.flyTo (200, 150, jsi.rectVisibleAtZoomLevel (200,100));
+            }
+            
+            function fullScreen () {
+                var container = document.getElementById ("container");
+                jsi.fullScreen ({});
+            }
+            
+            function flashUI () {
+                jsi.showTouchUI ();
+            }
+        </script>
+    </head>
+    <body onload="myonload();">
+        <div>
+            <div style="position: relative; background:black; overflow:hidden; height:600px;" id="container" class="bigshotContainer">
+            </div>
+        </div>
+        <div style="position:absolute; z-index:2; left: 0px; top:0px; width:100%;">
+            <div style="color:white; position:relative; background-color:rgba(0,0,0,0.8); border:1px solid rgba(0,0,0,0.7);">
+                <p style="margin: 0px; text-align:center">
+                Zoom: 
+                <button class="control" onclick="zoomOut(); return false;" type="button">Out</button>
+                <button class="control" onclick="zoomIn (); return false;" type="button">In</button>
+                <button class="control" onclick="smoothIn(); return false;" type="button">To Center</button>
+                <button class="control" onclick="toHotspot(); return false;" type="button">To Hotspot</button>
+                <button class="control" onclick="jsi.flyZoomToFit (); return false;" type="button">Fit</button>
+                <button class="control" onclick="jsi.zoomToFill (); return false;" type="button">Fill</button>
+                
+                &#160;&#160;&#160;&#160;View:
+                <button class="control" onclick="fullScreen (); return false;" type="button">Fullscreen</button>
+                </p>
+            </div>
+        </div>
+    </body>
+</html>

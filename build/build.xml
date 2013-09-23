@@ -1,0 +1,400 @@
+<!--
+- Copyright 2010 - 2012 Leo Sutic <leo.sutic@gmail.com>
+-  
+- Licensed under the Apache License, Version 2.0 (the "License"); 
+- you may not use this file except in compliance with the License. 
+- You may obtain a copy of the License at 
+- 
+-     http://www.apache.org/licenses/LICENSE-2.0 
+-     
+- Unless required by applicable law or agreed to in writing, software 
+- distributed under the License is distributed on an "AS IS" BASIS, 
+- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
+- See the License for the specific language governing permissions and 
+- limitations under the License. 
+-->
+<project name="bigshot" default="help" basedir="..">
+    
+    <property name="temp" value="temp/"/>
+    <property name="src" value="src/"/>
+    <property name="doc" value="doc/"/>
+    <property name="final" value="final/"/>
+    <property name="version" value="1.2"/>
+    <property name="package-dir" value="${final}/bigshot"/>
+    <property name="site-dir" value="${basedir}/../site/"/>
+    
+    <target name="clean">
+        <mkdir dir="${temp}/"/>
+        <delete includeEmptyDirs="true">
+            <fileset dir="${temp}/"/>
+        </delete>
+        <mkdir dir="${final}/"/>
+        <delete includeEmptyDirs="true">
+            <fileset dir="${final}/"/>
+        </delete>
+    </target>
+    
+    <target name="build-tools">
+        <mkdir dir="${temp}/tool-classes/"/>
+        
+        <mkdir dir="${temp}/classes/"/>
+        <javac failonerror="true" fork="yes" 
+            destdir="${temp}/tool-classes/"
+            classpath="${temp}/tool-classes/" 
+            deprecation="on"
+            debug="on"
+            source="1.6"
+            target="1.6"
+            includeantruntime="false">
+            <src path="${src}/tools/"/>
+        </javac>
+    </target>
+    
+    <target name="prepare-source" depends="build-tools">
+        <mkdir dir="${temp}/prepared-source/java"/>
+        <copy todir="${temp}/prepared-source/java">
+            <fileset dir="${src}/java"/>
+        </copy>
+        <java fork="yes" classpath="${temp}/tool-classes/"
+            dir="${basedir}" classname="bigshot.tools.ParamGen">
+            <arg value="${src}/java/bigshot/ImagePyramidParameters.java"/>
+            <arg value="${temp}/prepared-source/java/bigshot/ImagePyramidParameters.java"/>
+        </java>
+    </target>
+    
+    <target name="build" depends="prepare-source">
+        <mkdir dir="${temp}/classes/"/>
+        <javac failonerror="true" fork="yes" 
+            destdir="${temp}/classes/"
+            classpath="${ibuild.temp}/classes/" 
+            deprecation="on"
+            debug="on"
+            source="1.6"
+            target="1.6"
+            includeantruntime="false">
+            <src path="${temp}/prepared-source/java/"/>
+        </javac>
+    </target>
+    
+    <target name="docs" depends="java-docs,js-docs">
+        
+    </target>
+    
+    <target name="java-docs" depends="prepare-source">
+        <mkdir dir="${package-dir}/doc/java"/>
+        <javadoc
+            access="protected"
+            Overview="${doc}/javadoc-files/overview.html"
+            Windowtitle="Bigshot ${version}"
+            Doctitle="Bigshot ${version}"
+            sourcepath="${temp}/prepared-source/java/"
+            destdir="${package-dir}/doc/java">
+            <link href="http://java.sun.com/javase/6/docs/api/"/>
+            <link href="http://java.sun.com/javaee/5/docs/api/"/>
+        </javadoc>
+    </target>
+    
+    <target name="js-docs">
+        <mkdir dir="${package-dir}/doc/js"/>
+        <property name="jsdoc-path" value="${ant.home}/../jsdoc-toolkit"/>
+        <java fork="yes" jar="${jsdoc-path}/jsrun.jar"
+            dir="${basedir}">
+            <arg value="${jsdoc-path}/app/run.js"/>
+            <arg value="-D=packageName:Bigshot ${version}"/>
+            <arg value="-t=${basedir}/tools/jsdoc"/>
+            <arg value="-d=${package-dir}/doc/js"/>
+            <arg value="${src}/js/"/>
+        </java>
+        <copy todir="${package-dir}/doc/js">
+            <fileset dir="${doc}/jsdoc-files/"/>
+        </copy>
+    </target>
+    
+    <target name="docs-help">
+        <mkdir dir="${package-dir}/doc/js"/>
+        <property name="jsdoc-path" value="${ant.home}/../jsdoc-toolkit"/>
+        <java fork="yes" jar="${jsdoc-path}/jsrun.jar"
+            dir="${basedir}">
+            <arg value="${jsdoc-path}/app/run.js"/>
+            <arg value="-h"/>
+        </java>
+    </target>
+    
+    <target name="package">
+        <jar destfile="${package-dir}/bigshot.jar">
+            <fileset dir="${temp}/classes/" includes="bigshot/**"/>
+            <fileset dir="${src}/java/" includes="bigshot/**.txt"/>
+            <manifest>
+                <attribute name="Main-Class" value="bigshot.MakeImagePyramid"/>
+            </manifest>
+        </jar>
+        <java fork="yes" classpath="${temp}/tool-classes/" className="bigshot.tools.minihttpd.IncludeProcessor">
+            <arg value="${package-dir}/bigshot.js"/>
+            <arg value="${src}/js/bigshot.js"/>
+            <arg value="${src}/js/"/>
+        </java>
+        <copy todir="${package-dir}">            
+            <fileset dir="${src}/php/"/>
+            <fileset dir="${doc}" includes="LICENSE.txt,README.txt"/>
+        </copy>
+        <java fork="yes" jar="${basedir}/tools/yuicompressor-2.4.7.jar"
+            dir="${basedir}">
+            <arg value="-o"/>
+            <arg value="${package-dir}/bigshot-compressed.js"/>
+            <arg value="${package-dir}/bigshot.js"/>
+        </java>
+        
+        <concat destfile="${package-dir}/bigshot-full.js">
+            <filelist dir="${src}/js/webgl/" files="sylvester.js"/>
+            <filelist dir="${src}/js/webgl/" files="glUtils.js"/>
+            <filelist dir="${package-dir}/" files="bigshot.js"/>
+        </concat>
+        <java fork="yes" jar="${basedir}/tools/yuicompressor-2.4.7.jar"
+            dir="${basedir}">
+            <arg value="-o"/>
+            <arg value="${package-dir}/bigshot-full-compressed.js"/>
+            <arg value="${package-dir}/bigshot-full.js"/>
+        </java>
+        
+        <concat destfile="${package-dir}/bigshot-full-and-optional.js">
+            <filelist dir="${src}/js/webgl/" files="sylvester.js"/>
+            <filelist dir="${src}/js/webgl/" files="glUtils.js"/>
+            <filelist dir="${src}/js/webgl/" files="webgl-debug.js"/>
+            <filelist dir="${package-dir}/" files="bigshot.js"/>
+        </concat>
+        <java fork="yes" jar="${basedir}/tools/yuicompressor-2.4.7.jar"
+            dir="${basedir}">
+            <arg value="-o"/>
+            <arg value="${package-dir}/bigshot-full-and-optional-compressed.js"/>
+            <arg value="${package-dir}/bigshot-full-and-optional.js"/>
+        </java>
+        <zip destfile="${final}/bigshot-${version}.zip">
+            <fileset dir="${package-dir}"/>
+        </zip>
+    </target>
+    
+    <target name="dist">
+        <antcall target="clean"/>
+        <antcall target="build"/>
+        <antcall target="docs"/>
+        <antcall target="package"/>
+    </target>
+    
+    <target name="build-image">
+        <java fork="yes" jar="${package-dir}/bigshot.jar"
+            dir="${basedir}">
+            <arg value="test/sample.jpg"/>
+            <arg value="${temp}/image.bigshot"/>
+            <arg value="--format"/>
+            <arg value="archive"/>
+            <jvmarg value="-Xmx768M"/>
+        </java>
+    </target>
+    
+    <target name="build-vr">
+        <!--
+        <mkdir dir="${temp}/vr.bigshot"/>
+        <delete includeEmptyDirs="true">
+        <fileset dir="${temp}/vr.bigshot"/>
+        </delete>
+        -->
+        <java fork="yes" jar="${package-dir}/bigshot.jar"
+            dir="${basedir}">
+            <arg value="${basedir}/test/vr-sample.jpg"/>
+            <arg value="${temp}/vr.bigshot"/>
+            <arg value="--preset"/>
+            <arg value="dzi-cubemap"/>
+            
+            <arg value="--tile-size"/>
+            <arg value="510"/>
+            
+            <arg value="--format"/>
+            <arg value="archive"/>
+            
+            <jvmarg value="-Xmx1200M"/>
+        </java>
+    </target>
+    
+    <target name="build-cylinder-vr">
+        <!--
+        <mkdir dir="${temp}/vr.bigshot"/>
+        <delete includeEmptyDirs="true">
+        <fileset dir="${temp}/vr.bigshot"/>
+        </delete>
+        -->
+        <java fork="yes" jar="${package-dir}/bigshot.jar"
+            dir="${basedir}">
+            <arg value="${basedir}/test/cyl-sample.jpg"/>
+            <arg value="${temp}/cyl-vr.bigshot"/>
+            <arg value="--preset"/>
+            <arg value="dzi-cubemap"/>
+            
+            <arg value="--transform"/>
+            <arg value="cylinder-facemap"/>
+            <arg value="--transform-pto"/>
+            <arg value="${basedir}/test/cyl-sample.pto"/>
+            
+            <arg value="--tile-size"/>
+            <arg value="510"/>
+            
+            <arg value="--top-cap"/>
+            <arg value="true"/>
+            
+            <arg value="--bottom-cap"/>
+            <arg value="true"/>
+            
+            <arg value="--format"/>
+            <arg value="archive"/>
+            
+            <jvmarg value="-Xmx1024M"/>
+        </java>
+    </target>
+    
+    <target name="build-mars-vr">
+        <!--
+        <mkdir dir="${temp}/vr.bigshot"/>
+        <delete includeEmptyDirs="true">
+        <fileset dir="${temp}/vr.bigshot"/>
+        </delete>
+        -->
+        <java fork="yes" jar="${package-dir}/bigshot.jar"
+            dir="${basedir}">
+            <arg value="${basedir}/test/mars-sample.jpg"/>
+            <arg value="${temp}/mars-vr.bigshot"/>
+            <arg value="--preset"/>
+            <arg value="dzi-cubemap"/>
+            
+            <arg value="--input-vfov"/>
+            <arg value="124.4"/>
+            <arg value="--input-horizon"/>
+            <arg value="664"/>
+            
+            <arg value="--tile-size"/>
+            <arg value="510"/>
+            
+            <arg value="--top-cap"/>
+            <arg value="true"/>
+            
+            <arg value="--bottom-cap"/>
+            <arg value="true"/>
+            
+            <arg value="--format"/>
+            <arg value="archive"/>
+            
+            <jvmarg value="-Xmx1024M"/>
+        </java>
+    </target>
+    
+    <target name="build-site">
+        <mkdir dir="${site-dir}/${version}/doc/"/>
+        <delete includeEmptyDirs="true">
+            <fileset dir="${site-dir}/${version}/doc/"/>
+        </delete>
+        <copy todir="${site-dir}/${version}/doc/">
+            <fileset dir="${package-dir}/doc/"/>
+        </copy>
+    </target>
+    
+    <target name="host">
+        <echo><![CDATA[Point your web browser at:
+    http://localhost/]]></echo>
+        <java classname="bigshot.tools.minihttpd.MinimalHttpd"
+            classpath="${temp}/tool-classes/" fork="yes">
+            <arg value="."/>
+            <arg value="-1"/>
+            <arg value="/src/test/index.html"/>
+        </java>
+    </target>
+    
+    <target name="test-hires">
+        <!--
+        <mkdir dir="${temp}/vr.bigshot"/>
+        <delete includeEmptyDirs="true">
+        <fileset dir="${temp}/vr.bigshot"/>
+        </delete>
+        -->
+        <java fork="yes" jar="${package-dir}/bigshot.jar"
+            dir="${basedir}">
+            <arg value="${basedir}/test/vr-sample.jpg"/>
+            <arg value="${temp}/hires.png"/>
+            
+            <arg value="--transform"/>
+            <arg value="face"/>
+            
+            <arg value="--image-format"/>
+            <arg value="png"/>			
+            
+            <arg value="--yaw"/>
+            <arg value="238"/>
+            <arg value="--pitch"/>
+            <arg value="-12"/>
+            <arg value="--fov"/>
+            <arg value="90"/>
+            
+            <arg value="--yaw-offset"/>
+            <arg value="151"/>
+            <arg value="--pitch-offset"/>
+            <arg value="-0.25"/>
+            <arg value="--roll-offset"/>
+            <arg value="-1.0"/>
+            
+            <arg value="--output-width"/>
+            <arg value="2480"/>
+            <arg value="--output-height"/>
+            <arg value="3500"/>
+            
+            <arg value="--oversampling"/>
+            <arg value="2"/>
+            
+            <arg value="--jitter"/>
+            <arg value="0.2"/>
+            
+            <jvmarg value="-Xmx1224M"/>
+        </java>
+    </target>
+    
+    <target name="demo">
+        <antcall target="clean"/>
+        <antcall target="build"/>
+        <antcall target="package"/>
+        <antcall target="build-image"/>
+        <antcall target="build-vr"/>
+        <antcall target="build-cylinder-vr"/>
+        <antcall target="build-mars-vr"/>
+        <antcall target="host"/>
+    </target>
+    
+    <target name="help">
+        <echo><![CDATA[Targets:
+clean: 
+    Cleans the build environment.
+
+build: 
+    Compiles all sources (the image pyramid generator 
+    and the minimal HTTPd server).
+
+build-image: 
+    builds the image pyramid for the test page
+
+build-vr: 
+    builds the image pyramid(s) for the vr test page
+
+build-cylinder-vr: 
+    builds the image pyramid(s) for the cylinder vr test page
+
+build-mars-vr: 
+    builds the image pyramid(s) for the Mars vr test page
+
+host: 
+    starts the minimal httpd so we can access the test 
+    page
+
+dist:
+    Cleans the environment and creates a distribution 
+    package.
+
+demo: 
+    Compiles the sources, builds the test image pyramids,
+    and starts the HTTP server.]]></echo>
+    </target>
+</project>

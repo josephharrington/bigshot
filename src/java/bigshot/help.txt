@@ -1,0 +1,227 @@
+bigshot.MakeImagePyramid
+------------------------
+
+Usage:
+    java -jar bigshot.jar [--help]
+        Shows help - this page. 
+ 
+    java -jar bigshot.jar _infile_ _out_ [options]
+        Builds a tiled image pyramid, VR cube map or rectiliear 
+        image. 
+
+    java -Xmx<memory>M -jar bigshot.jar _infile_ _out_ [options]
+        Builds a tiled image pyramid and allocates more memory
+        to the program. Specify the amount of memory, in MB
+        that you want to use. Use this if you run out of
+        Java heap space.
+
+Options:
+
+    --preset dzi-cubemap
+        Selects a preset.
+        Default: no preset
+        
+            dzi-cubemap : creates a DZI cubemap
+                          Optional parameters are
+                          overlap, face-size and tile-size
+
+    --format
+        Output format. Can be "archive" or "folders".
+        Default: "folders".
+            archive : outputs the pyramid to a .bigshot archive
+            folders : outputs the pyramid to a folder structure
+
+    --poster-size pixels
+        Size of the low-resolution preview image along the
+        longest image dimension (width or height).
+        Default: 512
+
+    --tile-size pixels
+        Size in pixels of an image tile.
+        Default: 256
+
+    --levels levels
+        Number of levels in the image pyramid.
+        Default: Enough to shrink the image to half a tile
+        along the longest dimension.
+        Cannot be used with --wrap-x
+
+    --wrap-x true|false
+        Sets the number of levels in the pyramid to the number
+        of times the image can be reduced by a factor of 2
+        before it no longer falls on tile boundaries.
+        Cannot be used with --levels
+
+    --overlap pixels
+        Number of pixels overlap between tiles.
+        Default: 0
+
+    --image-format format
+        Image format for the tiles and everything. Can be
+        "jpg" or "png".
+        Default: "jpg"
+            jpg : Create JPEG files.
+            png : Create PNG files.
+        
+    --jpeg-quality quality
+        Jpeg quality, between 0.0 and 1.0. Only has effect
+        if --image-format is "jpg"
+        Default: 0.7
+
+    --transform facemap|cylinder-facemap|face
+        Applies a transform to the input image. Possible values
+        are:
+
+        facemap
+            Assumes that the input image is an equirectangular
+            map. Produces a cube map of six image pyramids.
+
+        cylinder-facemap
+            Assumes that the input image is an cylindrical map
+            map. Produces a cube map of six image pyramids.
+
+        face
+            Assumes that the input image is an equirectangular
+            map. Produces a single rectilinear image.
+
+        Default: none, no transform is applied
+
+    --face-size pixels
+        The size of each cube map face. Only applicable when
+        using --transform facemap
+
+    --folder-layout bigshot|dzi
+        Sets the folder structure of the output pyramid. 
+        Possible values are:
+
+        bigshot
+            Outputs a folder layout compatible with the default
+            Bigshot filesystem adapters.
+
+        dzi
+            Outputs a folder layout compatible with Microsoft's
+            Deep Zoom Image format.
+
+        Default: bigshot
+
+    --descriptor-format bigshot|dzi
+        Sets the descriptor format for the output pyramid.
+        Possible values are:
+
+        bigshot
+            Outputs a descriptor compatible with the default
+            Bigshot filesystem adapters.
+
+        dzi
+            Outputs a folder layout compatible with Microsoft's
+            Deep Zoom Image format.
+
+        Default: bigshot
+
+    --level-numbering invert
+        If set to "invert", inverts the level numbering. By 
+        default, zoom level 0 is the full-size image, level
+        1 is half the size of level 0, and so on. In the
+        Deep Zoom Image format, level N is the image at a 
+        resolution where the largest dimension is 2^n pixels.
+        For example, a 2048x2048 Deep Zoom image would be
+        at full resolution at level 11, half resolution at
+        level 10, and so on.
+
+    --yaw
+        The yaw angle, in degrees, of the viewer when using 
+        the "face" transform.
+        Default: 0
+
+    --pitch
+        The pitch angle, in degrees, of the viewer when using 
+        the "face" transform.
+        Default: 0
+
+    --roll
+        The roll angle, in degrees, of the viewer when using 
+        the "face" transform.
+        Default: 0
+
+    --yaw-offset
+        The initial yaw offset to apply when using the "face"
+        or "*-facemap" transforms, in degrees.
+        Default: 0
+
+    --pitch-offset
+        The initial pitch offset to apply when using the "face"
+        or "*-facemap" transforms, in degrees.
+        Default: 0
+
+    --roll-offset
+        The initial roll offset to apply when using the "face"
+        or "*-facemap" transforms, in degrees.
+        Default: 0
+
+    --input-horizon
+        For the "*-facemap" transforms, the y-coordinate of
+        the horizon in the map image.
+
+    --input-vfov
+        For the "*-facemap" transforms, the vertical field of
+        view of the map image, in degrees.
+
+    --input-hfov
+        For the "*-facemap" transforms, the horizontal field of
+        view of the map image, in degrees.
+
+    --transform-pto
+        For the "*-facemap" transforms, sets the input-vfov
+        and input-horizon parameters from a Hugin .pto file.
+        Note: You must still specify the transform (cylindrical
+        or equirectangular).
+
+    --oversampling
+        The resolution, along each axis, of the oversampling 
+        grid when using the "face" transform.
+        Default: 1
+
+    --jitter
+        The random sampling jitter to use when using 
+        the "face" transform.
+
+    --output-width
+        The output image width when using the "face" transform.
+
+    --output-height
+        The output image width when using the "face" transform.
+
+Example:
+
+    java -jar bigshot.jar big.jpg big.bigshot --format archive
+
+    Creates a bigshot archive of big.jpg.
+
+
+    java -jar bigshot.jar big.jpg big.bigshot 
+        --preset dzi-cubemap
+            
+    Creates a Deep Zoom Image cubic facemap from an 
+    equirectangular image map.
+
+
+    java -Xmx800M -jar bigshot.jar big.jpg big.bigshot 
+        --preset dzi-cubemap
+            
+    Creates a Deep Zoom Image cubic facemap from an 
+    equirectangular image map, and allocates 800MB
+    to the program.
+
+    java -Xmx800M -jar bigshot.jar big.jpg big.bigshot 
+        --preset dzi-cubemap
+        --input-vfov 124.4
+        --input-horizon 2655
+        --tile-size 510
+        --face-size 2040
+        --format archive
+            
+    Creates a Deep Zoom Image cubic facemap from an 
+    equirectangular image map, allocating 800MB
+    to the program and setting the vertical field
+    of view and horizon position. This is what was used
+    to create the Mars demo panorama.
