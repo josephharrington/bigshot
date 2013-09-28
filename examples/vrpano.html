@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta name="viewport" content="initial-scale=1.0, width=device-width, height=device-height, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+        <title>
+            Bigshot VRPanorama
+        </title>
+        <style>
+            body {
+                margin: 0px;
+                padding: 0px;
+                font-family: Arial;
+                font-size: 10pt;
+                background-color: black;
+                overflow: hidden;
+            }
+            
+            input[type="radio"] {
+                background-color: black;
+            }
+            
+            h2 {
+                font-family: Arial;
+                font-size: 14pt;
+            }
+            
+            td.playerContainer {
+                padding:8px;
+            }
+            
+            td.playerContainerLeft {
+                border-right: 1px solid #b8b8b8;
+            }
+            
+            div#container {
+                overflow: hidden;
+            }
+            
+            div.hotspot {
+                width:48px; 
+                height: 48px; 
+                position:absolute; 
+                z-index:2;
+                border: 1px solid #808080;
+                opacity: 0.5;
+            }
+            
+            div.hotspot_label {
+                visibility:hidden;
+            }
+            
+            div.hotspot:hover {
+                opacity: 1.0;
+                border: 1px solid #ffffff;
+                cursor: hand;
+            }
+            
+            div.hotspot:hover div.hotspot_label {
+                visibility:visible;
+            }
+            
+            span.coordinate {
+                width: 4em;
+                text-align:right;
+                display: inline-block;
+            }
+            
+            div.controls {
+                padding: 4px;
+            }
+            
+            button.control {
+                width: 96px;
+            }
+        </style>
+        <script>
+            if (self["console"] == null) {
+                self.console = {
+                    log : function () {}
+                };
+            }
+        </script>
+        <script src="webgl/webgl-debug.js"></script>
+        <script src="webgl/sylvester.js"></script>
+        <script src="webgl/glUtils.js"></script>
+        <script src="bigshot.js">/* */</script>
+        <script>            
+            var bvr = null;
+            var lodMonitor = null;
+            var displayUpdater = null;
+            
+            function vrpano () {
+                var vrFileName = document.location.hash ? document.location.hash.substring (1) : "vr.bigshot";
+                var hotspot = document.getElementById ("hotspot");
+                var linear = null;
+                if (bigshot.WebGLUtil.isWebGLSupported ()) {
+                    linear = bigshot.WebGLUtil.createContext (document.createElement ("canvas")).LINEAR;
+                }
+                bvr = new bigshot.VRPanorama (
+                    new bigshot.VRPanoramaParameters ({
+                            container : document.getElementById ("container"),
+                            basePath : "bigshot.php?file=img/" + vrFileName + "&entry=",
+                            fileSystemType : "dzi",
+                            textureMinFilter : linear,
+                            textureMagFilter : linear,
+                            //maxTesselation : 1,
+                            maxTextureMagnification : 3,
+                            rollOffset : 0,
+                            pitchOffset : 0,
+                            yawOffset : 0,
+                            maxFov : 120
+                        }));
+                
+                displayUpdater = function (state, cause, data) {
+                    if (state == bigshot.VRPanorama.ONRENDER_BEGIN) {
+                        var s = document.getElementById ("position-yaw");
+                        s.innerHTML = bvr.getYaw ().toFixed (3);
+                        s = document.getElementById ("position-pitch");
+                        s.innerHTML = bvr.getPitch ().toFixed (3);
+                    }
+                };
+                bvr.addRenderListener (displayUpdater);
+                lodMonitor = new bigshot.AdaptiveLODMonitor (
+                    new bigshot.AdaptiveLODMonitorParameters ({
+                            vrPanorama : bvr,
+                            targetFps : 30,
+                            tolerance : 0.3,
+                            rate : 0.1,
+                            minMag : 1.5,
+                            maxMag : 16
+                        }));
+                bvr.addRenderListener (lodMonitor.getListener ());
+                
+                document.getElementById ("container").addEventListener ("click", function (e) {
+                        var container = document.getElementById ("container");
+                        var clicked = bvr.screenToPolar (e.clientX - container.offsetLeft, e.clientY - container.offsetTop);
+                        document.getElementById ("clicked-yaw").innerHTML = clicked.yaw.toFixed (3);
+                        document.getElementById ("clicked-pitch").innerHTML = clicked.pitch.toFixed (3);
+                    });
+                
+                //bvr.autoRotateWhenIdle (3);
+                bvr.setDragMode (bigshot.VRPanorama.DRAG_GRAB);
+                
+                var outerContainer = document.getElementById ("outerContainer");
+                bvr.autoResizeContainer (outerContainer);
+                var onresize = function (e) {
+                    outerContainer.style.width = window.innerWidth + "px";
+                    outerContainer.style.height = window.innerHeight + "px";
+                };
+                window.onresize = onresize;
+                onresize ();
+                bvr.onresize ();
+                bvr.addHotspot (new bigshot.VRRectangleHotspot (bvr, -10, -8, 10, 2, hotspot));
+                
+                var hotspot2 = document.getElementById ("hotspot2");
+                var hs2 = new bigshot.VRPointHotspot (bvr, 10, -8, hotspot2, -16, -16);
+                hs2.clippingStrategy = bigshot.VRHotspot.CLIP_FADE (bvr, 32);
+                bvr.addHotspot (hs2);
+                bvr.render ();
+            }
+            
+            var frame = 0;
+            
+            function redraw () {
+                bvr.render ();
+            }
+            
+            function benchmark (profile) {
+                var FRAMES = 0;
+                bvr.removeRenderListener (lodMonitor.getListener ());
+                bvr.removeRenderListener (displayUpdater);
+                bvr.setMaxTextureMagnification (1.0);
+                if (profile && console.profile) {
+                    console.profile ();
+                }
+                var start = new Date ().getTime ();
+                while (true) {
+                    for (var i = 0; i < 20; ++i) {
+                        bvr.render ();
+                        ++FRAMES;
+                    }
+                    var elapsed = new Date ().getTime () - start;
+                    if (elapsed > 2000) {
+                        break;
+                    }
+                }
+                if (profile && console.profileEnd) {
+                    console.profileEnd ();
+                }
+                var end = new Date ().getTime ();
+                var delta = (end - start);
+                var fps = 1000 * FRAMES / delta;
+                var mspf = delta / FRAMES;
+                bvr.addRenderListener (displayUpdater);
+                bvr.addRenderListener (lodMonitor.getListener ());
+                alert ("Frames:" + FRAMES + "\n" +
+                    "FPS:" + fps + "\n" + 
+                        "ms/f:" + mspf);
+            }
+            
+            function autorotate () {
+                bvr.autoRotate ();
+            }
+            
+            function fullScreen () {
+                bvr.fullScreen ();
+            }
+            
+            function gotoYP () {
+                var yaw = parseFloat (prompt ("Yaw", bvr.getYaw ()));
+                var pitch = parseFloat (prompt ("Pitch", bvr.getPitch ()));
+                var fov = parseFloat (prompt ("Fov", bvr.getFov ()));
+                
+                bvr.setYaw (yaw);
+                bvr.setPitch (pitch);
+                bvr.setFov (fov);
+                bvr.render ();
+            }
+            
+            function hideButtons () {
+                document.getElementById ("buttonBar").style.display = "none";
+            }
+            
+            function qualityMode (mode) {
+                bvr.removeRenderListener (lodMonitor.getListener ());
+                lodMonitor.setEnabled (false);
+                if ("adaptive" == mode) {
+                    bvr.addRenderListener (lodMonitor.getListener ());
+                    lodMonitor.setEnabled (true);
+                } else if ("mag1" == mode) {
+                    bvr.setMaxTextureMagnification (1);
+                } else if ("mag0" == mode) {
+                    bvr.setMaxTextureMagnification (0);
+                }
+                bvr.render ();
+            }
+            
+            function benchmarkGc (profile) {
+                for (var i = 0; i < 10; ++i) {
+                    bvr.dispose ();
+                    bvr = null;
+                    vrpano ();
+                }
+            }
+        </script>
+    </head>
+    <body onload="vrpano();">
+        <div style="background:black; height:400px; width:100%;" id="outerContainer">
+            <div style="background:black; height:400px;" id="container">
+                <div style="width:0px; height:0px; position:absolute; z-index:1;">
+                    <div class="hotspot" id="hotspot" style="text-align:center; width:1px;"
+                        onclick="alert('Clicked on hotspot!');">
+                        <div style="position:absolute; left: 50%; top:100%;">
+                            <div class="hotspot_label" style="position:absolute; width:30em; left: -15em; top: 16px; text-align:center">
+                                <span style="background:black; color:white; padding:4px; font-family:arial; font-size: 10pt;">
+                                    A Rectangular Hotspot
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="hotspot" id="hotspot2" style="border: none; text-align:center; width:32px; height:32px;"><img src="hotspot-image.png"/></div>
+                </div>
+                <div style="width:0px; left:50%; height:0px; position:absolute; top:50%; z-index:1;">
+                    <div style="width:32px; height:32px; position: relative; border-top:1px solid red; border-left:1px solid red; display:none">&#160;</div>
+                </div>
+            </div>
+        </div>
+        <div id="buttonBar" style="position:absolute; z-index:2; left: 0px; top:0px; width:100%;">
+            <div style="color:white; position:relative; background-color:rgba(0,0,0,0.8); border:1px solid rgba(0,0,0,0.7);">
+                <div style="display:block; float:right">[<a href="#" onclick="hideButtons(); return false;">X</a>]</div>
+                <p style="margin: 0px; text-align:center">
+                <button class="control" onclick="redraw(); return false;" type="button">Redraw</button>
+                <button class="control" onclick="autorotate(); return false;" type="button">Autorotate</button>
+                <button class="control" onclick="gotoYP(); return false;" type="button">Go to</button>
+                <button class="control" onclick="fullScreen(); return false;" type="button">Fullscreen</button>
+                <button class="control" onclick="benchmark(false); return false;" type="button">Benchmark</button>
+                <button class="control" onclick="benchmarkGc (); return false;" type="button">Reinit</button>
+                <button class="control" onclick="benchmark(true); return false;" type="button">Profile</button>
+                <button class="control" onclick="bvr.setFov (bvr.getMinFovFromViewportAndImage ()); bvr.render (); return false;" type="button">100% Zoom</button>
+                </p>
+                
+                
+                <table style="margin: 0 auto;">
+                    <tr>
+                        <td>
+                            Quality mode:
+                        </td>
+                        <td>
+                            <input type="radio" name="qualityMode" value="adaptive" onchange="qualityMode ('adaptive');" checked="true"/> Adaptive
+                            <input type="radio" name="qualityMode" value="mag1" onchange="qualityMode ('mag1');"/> 100%
+                            <input type="radio" name="qualityMode" value="mag0" onchange="qualityMode ('mag0');"/> Maximum
+                        </td>
+                        <td style="padding-left:32px">
+                            Looking:
+                        </td>
+                        <td>
+                            Yaw:
+                        </td>
+                        <td>
+                            <span id="position-yaw" class="coordinate"></span>
+                        </td>
+                        <td>
+                            Pitch:
+                        </td>
+                        <td>
+                            <span id="position-pitch" class="coordinate"></span>
+                        </td>
+                    </tr>
+                    <tr>
+                        
+                        <td>
+                            Drag mode:
+                        </td>
+                        <td>
+                            <input type="radio" name="panMode" value="drag" onchange="bvr.setDragMode (bigshot.VRPanorama.DRAG_PAN);"/> Pan
+                            <input type="radio" name="panMode" value="grab" onchange="bvr.setDragMode (bigshot.VRPanorama.DRAG_GRAB);" checked="true"/> Grab
+                        </td>
+                        
+                        <td style="padding-left:32px">
+                            Clicked:
+                        </td>
+                        <td>
+                            Yaw:
+                        </td>
+                        <td>
+                            <span id="clicked-yaw" class="coordinate">none</span>
+                        </td>
+                        <td>
+                            Pitch:
+                        </td>
+                        <td>
+                            <span id="clicked-pitch" class="coordinate">none</span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </body>
+</html>
