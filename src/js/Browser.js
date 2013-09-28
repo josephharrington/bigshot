@@ -98,6 +98,8 @@ bigshot.Browser.prototype = {
     * on MDN for an explanation.
     */
     registerListener : function (_elem, _evtName, _fn, _useCapture) {
+        if (_elem == null) return;
+        
         if (typeof _elem.addEventListener != 'undefined')
         {
             if (_evtName === 'mouseenter')

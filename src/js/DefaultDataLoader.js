@@ -78,7 +78,7 @@ bigshot.DefaultDataLoader.prototype = {
                 }
             } 
             
-            if (tries == that.maxRetries) {
+            if (tries == this.maxRetries) {
                 if (onloaded) {
                     onloaded (null);
                 }
