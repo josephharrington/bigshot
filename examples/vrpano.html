@@ -99,7 +99,7 @@
                 bvr = new bigshot.VRPanorama (
                     new bigshot.VRPanoramaParameters ({
                             container : document.getElementById ("container"),
-                            basePath : "bigshot.php?file=img/" + vrFileName + "&entry=",
+                            basePath : "img/" + vrFileName + '/', // + "&entry=",
                             fileSystemType : "dzi",
                             textureMinFilter : linear,
                             textureMagFilter : linear,
